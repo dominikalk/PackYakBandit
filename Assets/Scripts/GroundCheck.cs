@@ -13,6 +13,7 @@ public class GroundCheck : MonoBehaviour
     void Start()
     {
         theCharacter = FindObjectOfType<Character>();
+        platform = GameObject.FindGameObjectsWithTag("Platform")[0];
     }
 
     // Update is called once per frame
