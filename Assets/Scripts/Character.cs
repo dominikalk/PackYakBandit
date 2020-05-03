@@ -39,6 +39,11 @@ public class Character : MonoBehaviour
     private bool WASD;
 
     [SerializeField] GameObject pauseMenu = default;
+    [SerializeField] GameObject GOMenu = default;
+
+    [SerializeField] ParticleSystem deathParticles;
+
+    public bool UIClicked;
 
     // Start is called before the first frame update
     void Start()
@@ -62,12 +67,23 @@ public class Character : MonoBehaviour
         {
             enemy.maxSpeed = 0.5f;
         }
+
+        StartCoroutine("walkingSound");
+
+        MusicController theMusic = FindObjectOfType<MusicController>();
+        AudioSource theMusicAudio = theMusic.GetComponent<AudioSource>();
+        if(theMusicAudio.clip != theMusic.mainLoop)
+        {
+            theMusicAudio.clip = theMusic.mainLoop;
+            theMusicAudio.volume = 1;
+            theMusicAudio.Play();
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape) && !GOMenu.activeSelf)
         {
             Time.timeScale = 0;
             pauseMenu.SetActive(true);
@@ -95,13 +111,19 @@ public class Character : MonoBehaviour
                 {
                     charAnim.SetBool("IsMoving", true);
                     myRigid.velocity = new Vector2(-speed, myRigid.velocity.y);
-                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
+                    if (!stillShooting)
+                    {
+                        transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
+                    }
                 }
                 if (Input.GetKey(KeyCode.D))
                 {
                     charAnim.SetBool("IsMoving", true);
                     myRigid.velocity = new Vector2(speed, myRigid.velocity.y);
-                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
+                    if (!stillShooting)
+                    {
+                        transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
+                    }
                 }
             }
             if(!Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D))
@@ -167,17 +189,23 @@ public class Character : MonoBehaviour
                 StartCoroutine("setCanJump");
             }
         }
-       
+
 
         // ---------- Grapple --------------
 
-        if (Input.GetMouseButtonDown(0) && !grappleShot)
+        if (!UIClicked && !pauseMenu.activeSelf)
         {
-            grappleShot = true;
-            stillShooting = true;
-            charAnim.SetBool("StillShooting", true);
-            startGrapple();
-
+            if (Input.GetMouseButtonDown(0) && !grappleShot)
+            {
+                grappleShot = true;
+                stillShooting = true;
+                charAnim.SetBool("StillShooting", true);
+                startGrapple();
+            }
+        }
+        else
+        {
+            UIClicked = false;
         }
         if (!Input.GetMouseButton(0))
         {
@@ -192,6 +220,15 @@ public class Character : MonoBehaviour
 
     IEnumerator grappleMoving(Vector2 mousePos)
     {
+        if (mousePos.x < handPosition.position.x)
+        {
+            transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
+        }
+        else
+        {
+            transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
+        }
+
         grapple.transform.position = handPosition.position;
         grapple.gameObject.SetActive(true);
         Vector2 dirVector = mousePos - new Vector2(handPosition.position.x, handPosition.position.y);
@@ -217,6 +254,17 @@ public class Character : MonoBehaviour
 
         while (Vector2.Distance(new Vector2(grapple.transform.position.x, grapple.transform.position.y), targetPos) > grappleForgiveness)
         {
+            if (Mathf.Abs(targetPos.x - handPosition.position.x) > 0.3f)
+            {
+                if (targetPos.x < handPosition.position.x)
+                {
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
+                }
+                else
+                {
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
+                }
+            }
             float step = grappleSpeed * Time.deltaTime * grappleSpeedGraph.Evaluate(distanceTravelled / grappleMaxDistance);
             distanceTravelled += step;
             grapple.transform.position = Vector2.MoveTowards(grapple.transform.position, targetPos, step);
@@ -233,6 +281,17 @@ public class Character : MonoBehaviour
     {
         while (stillShooting)
         {
+            if (Mathf.Abs(targetPos.x - handPosition.position.x) > 0.3f) 
+            {
+                if (targetPos.x < handPosition.position.x)
+                {
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
+                }
+                else
+                {
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
+                }
+            }
             Vector2 pullDirection = targetPos - new Vector2(handPosition.position.x, handPosition.position.y);
             float yDist = Mathf.Abs(targetPos.y - handPosition.position.y);
             if (yDist < fallOffDistance)
@@ -302,5 +361,25 @@ public class Character : MonoBehaviour
             enemy.maxSpeed *= 1.5f;
         }
         changeSpeed = true;
+    }
+
+    IEnumerator walkingSound()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(0.15f);
+            if((Mathf.Abs(myRigid.velocity.x) > 0 || myRigid.velocity.y > 0) && (onGround || onLadder))
+            {
+                GameObject.FindGameObjectWithTag("WalkSound").GetComponent<CoinSound>().playSound();
+            }
+        }
+    }
+
+    public void died()
+    {
+        deathParticles.transform.position = transform.position;
+        deathParticles.gameObject.SetActive(true);
+        deathParticles.Play();
+        gameObject.SetActive(false);
     }
 }

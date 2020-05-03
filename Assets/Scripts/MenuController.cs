@@ -12,6 +12,7 @@ public class MenuController : MonoBehaviour
 
     [Space]
     [SerializeField] private Text GOCoinText;
+    [SerializeField] private GameObject GOPanel;
     [SerializeField] private GameObject pausePanel;
 
     // Start is called before the first frame update
@@ -44,7 +45,22 @@ public class MenuController : MonoBehaviour
     public void resumeClicked()
     {
         Time.timeScale = 1;
+        FindObjectOfType<Character>().UIClicked = true;
         pausePanel.SetActive(false);
+    }
+
+    public void restartClicked()
+    {
+        StartCoroutine("restartFadeOut");
+    }
+
+    IEnumerator restartFadeOut()
+    {
+        MusicController theMusicController = FindObjectOfType<MusicController>();
+        StartCoroutine(theMusicController.fadeInOutAudio(theMusicController.mainLoop, 0.25f));
+        yield return null;
+        Time.timeScale = 1;
+        SceneManager.LoadScene("MainScene");
     }
 
     public void mainMenuClicked()
@@ -62,5 +78,6 @@ public class MenuController : MonoBehaviour
     {
         Time.timeScale = 0;
         GOCoinText.text = FindObjectOfType<Character>().coinsCollected.ToString();
+        GOPanel.SetActive(true);
     }
 }

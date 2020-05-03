@@ -74,6 +74,8 @@ public class Enemy : MonoBehaviour
         if (collision.CompareTag("Character"))
         {
             FindObjectOfType<MenuController>().playerDied();
+            FindObjectOfType<MusicController>().died();
+            theChar.died();
         }
     }
 }

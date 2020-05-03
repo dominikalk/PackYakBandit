@@ -29,7 +29,7 @@ public class Coin : MonoBehaviour
         {
             canHit = false;
             FindObjectOfType<Character>().coinCollected(gameObject);
-            FindObjectOfType<CoinSound>().playSound();
+            GameObject.FindGameObjectWithTag("CoinSound").GetComponent<CoinSound>().playSound();
         }
     }
 }

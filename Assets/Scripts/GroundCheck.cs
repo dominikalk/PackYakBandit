@@ -6,14 +6,15 @@ public class GroundCheck : MonoBehaviour
 {
     private Character theCharacter;
     private int floorCount;
-    private bool isOnPlatform;
-    private GameObject platform;
+    private int platformCount;
+
+    private GameObject[] platforms;
 
     // Start is called before the first frame update
     void Start()
     {
         theCharacter = FindObjectOfType<Character>();
-        platform = GameObject.FindGameObjectsWithTag("Platform")[0];
+        platforms = GameObject.FindGameObjectsWithTag("Platform");
     }
 
     // Update is called once per frame
@@ -21,16 +22,20 @@ public class GroundCheck : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
         {
-            if(isOnPlatform)
+            if(platformCount > 0)
             {
-                platform.GetComponent<PlatformEffector2D>().rotationalOffset = 180;
+                foreach (GameObject thePlatform in platforms)
+                {
+                    thePlatform.GetComponent<PlatformEffector2D>().rotationalOffset = 180;
+                }
             }
         }
-        else
+
+        if (Input.GetKeyUp(KeyCode.S) || Input.GetKeyUp(KeyCode.DownArrow))
         {
-            if (!isOnPlatform)
+            foreach (GameObject thePlatform in platforms)
             {
-                platform.GetComponent<PlatformEffector2D>().rotationalOffset = 0;
+                thePlatform.GetComponent<PlatformEffector2D>().rotationalOffset = 0;
             }
         }
     }
@@ -45,8 +50,7 @@ public class GroundCheck : MonoBehaviour
 
             if (collision.CompareTag("Platform"))
             {
-                platform = collision.gameObject;
-                isOnPlatform = true;
+                platformCount += 1;
             }
         }
     }
@@ -58,7 +62,7 @@ public class GroundCheck : MonoBehaviour
 
             if (collision.CompareTag("Platform"))
             {
-                isOnPlatform = false;
+                platformCount -= 1;
             }
         }
 
@@ -66,6 +70,14 @@ public class GroundCheck : MonoBehaviour
         {
             theCharacter.onGround = false;
             theCharacter.charAnim.SetBool("OnGround", false);
+        }
+
+        if (platformCount <= 0)
+        {
+            foreach (GameObject thePlatform in platforms)
+            {
+                thePlatform.GetComponent<PlatformEffector2D>().rotationalOffset = 0;
+            }
         }
     }
 }

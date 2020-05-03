@@ -77,7 +77,6 @@ public class CameraController : MonoBehaviour
         yield return new WaitForSeconds(2.5f);
         while (true)
         {
-            yield return new WaitForSeconds(stompSpeed);
             StartCoroutine("cameraShake");
             GameObject[] lights = GameObject.FindGameObjectsWithTag("LightBulb");
             foreach(GameObject light in lights)
@@ -95,6 +94,8 @@ public class CameraController : MonoBehaviour
                 GameObject.FindGameObjectWithTag("Head").GetComponent<Animator>().SetFloat("speedMag", 1f / stompSpeed);
                 theChar.changeSpeed = false;
             }
+            GameObject.FindGameObjectWithTag("ThumpSound").GetComponent<CoinSound>().playSound();
+            yield return new WaitForSeconds(stompSpeed);
         }
     }
 
