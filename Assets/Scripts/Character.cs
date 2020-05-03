@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Pathfinding;
 
 public class Character : MonoBehaviour
 {
@@ -10,14 +11,14 @@ public class Character : MonoBehaviour
     [SerializeField] private float jumpForce = default;
     private Rigidbody2D checkFloor;
 
-    [SerializeField] private GameObject[] coins;
+    [SerializeField] private GameObject[] coins = default;
 
     private bool canJump = true;
     public bool onGround = true;
     public bool onLadder = false;
     [HideInInspector] public Animator charAnim;
 
-    private int coinsCollected = 0;
+    public int coinsCollected = 0;
     [SerializeField] private Text coinText = default;
 
     [Space]
@@ -28,10 +29,16 @@ public class Character : MonoBehaviour
     [SerializeField] private float grappleMaxDistance = default;
     private bool grappleShot;
     private bool stillShooting;
-    [SerializeField] private float pullForce;
-    [SerializeField] private float fallOffDistance;
-    [SerializeField] private AnimationCurve fallOffCurve;
-    [SerializeField] private float grappleForgiveness;
+    [SerializeField] private float pullForce = default;
+    [SerializeField] private float fallOffDistance = default;
+    [SerializeField] private AnimationCurve fallOffCurve = default;
+    [SerializeField] private float grappleForgiveness = default;
+
+    public bool changeSpeed;
+
+    private bool WASD;
+
+    [SerializeField] GameObject pauseMenu = default;
 
     // Start is called before the first frame update
     void Start()
@@ -49,51 +56,118 @@ public class Character : MonoBehaviour
                 coinsActive += 1;
             }
         }
+
+        AIPath[] enemies = FindObjectsOfType<AIPath>();
+        foreach (AIPath enemy in enemies)
+        {
+            enemy.maxSpeed = 0.5f;
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Time.timeScale = 0;
+            pauseMenu.SetActive(true);
+        }
+
+        if(Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.D))
+        {
+            WASD = true;
+        }
+        else if(Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.RightArrow))
+        {
+            WASD = false;
+        }
+
         // --------------- WASD KEYS ----------------------------
-        if(Input.GetKey(KeyCode.A) && Input.GetKey(KeyCode.D))
+        if (WASD)
         {
+            if(Input.GetKey(KeyCode.A) && Input.GetKey(KeyCode.D))
+            {
 
+            }
+            else
+            {
+                if (Input.GetKey(KeyCode.A))
+                {
+                    charAnim.SetBool("IsMoving", true);
+                    myRigid.velocity = new Vector2(-speed, myRigid.velocity.y);
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
+                }
+                if (Input.GetKey(KeyCode.D))
+                {
+                    charAnim.SetBool("IsMoving", true);
+                    myRigid.velocity = new Vector2(speed, myRigid.velocity.y);
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
+                }
+            }
+            if(!Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D))
+            {
+                charAnim.SetBool("IsMoving", false);
+                myRigid.velocity = new Vector2(0, myRigid.velocity.y);
+            }
+            if (Input.GetKey(KeyCode.W) && onLadder)
+            {
+                myRigid.velocity = new Vector2(myRigid.velocity.x, speed);
+                charAnim.SetBool("Climbing", true);
+            }
+            else
+            {
+                charAnim.SetBool("Climbing", false);
+            }
+
+            if (Input.GetKeyDown(KeyCode.W) && onGround && canJump)
+            {
+                myRigid.AddForce(new Vector2(0, jumpForce));
+                StartCoroutine("setCanJump");
+            }
         }
         else
         {
-            if (Input.GetKey(KeyCode.A))
+            if (Input.GetKey(KeyCode.LeftArrow) && Input.GetKey(KeyCode.RightArrow))
             {
-                charAnim.SetBool("IsMoving", true);
-                myRigid.velocity = new Vector2(-speed, myRigid.velocity.y);
-                transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
-            }
-            if (Input.GetKey(KeyCode.D))
-            {
-                charAnim.SetBool("IsMoving", true);
-                myRigid.velocity = new Vector2(speed, myRigid.velocity.y);
-                transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
-            }
-        }
-        if(!Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D))
-        {
-            charAnim.SetBool("IsMoving", false);
-            myRigid.velocity = new Vector2(0, myRigid.velocity.y);
-        }
-        if (Input.GetKey(KeyCode.W) && onLadder)
-        {
-            myRigid.velocity = new Vector2(myRigid.velocity.x, speed);
-            charAnim.SetBool("Climbing", true);
-        }
-        else
-        {
-            charAnim.SetBool("Climbing", false);
-        }
 
-        if (Input.GetKeyDown(KeyCode.W) && onGround && canJump)
-        {
-            myRigid.AddForce(new Vector2(0, jumpForce));
-            StartCoroutine("setCanJump");
+            }
+            else
+            {
+                if (Input.GetKey(KeyCode.LeftArrow))
+                {
+                    charAnim.SetBool("IsMoving", true);
+                    myRigid.velocity = new Vector2(-speed, myRigid.velocity.y);
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x) * -1f, transform.localScale.y);
+                }
+                if (Input.GetKey(KeyCode.RightArrow))
+                {
+                    charAnim.SetBool("IsMoving", true);
+                    myRigid.velocity = new Vector2(speed, myRigid.velocity.y);
+                    transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
+                }
+            }
+            if (!Input.GetKey(KeyCode.LeftArrow) && !Input.GetKey(KeyCode.RightArrow))
+            {
+                charAnim.SetBool("IsMoving", false);
+                myRigid.velocity = new Vector2(0, myRigid.velocity.y);
+            }
+            if (Input.GetKey(KeyCode.UpArrow) && onLadder)
+            {
+                myRigid.velocity = new Vector2(myRigid.velocity.x, speed);
+                charAnim.SetBool("Climbing", true);
+            }
+            else
+            {
+                charAnim.SetBool("Climbing", false);
+            }
+
+            if (Input.GetKeyDown(KeyCode.UpArrow) && onGround && canJump)
+            {
+                myRigid.AddForce(new Vector2(0, jumpForce));
+                StartCoroutine("setCanJump");
+            }
         }
+       
 
         // ---------- Grapple --------------
 
@@ -109,7 +183,6 @@ public class Character : MonoBehaviour
         {
             stillShooting = false;
         }
-
     }
 
     void startGrapple()
@@ -209,11 +282,25 @@ public class Character : MonoBehaviour
         StartCoroutine(setCoinInactive(hitCoin));
         coinsCollected += 1;
         coinText.text = coinsCollected.ToString();
+        if(coinsCollected % 3 == 0)
+        {
+            increaseSpeed();
+        }
     }
 
     IEnumerator setCoinInactive(GameObject hitCoin)
     {
         yield return new WaitForSeconds(0.5f);
         hitCoin.SetActive(false);
+    }
+
+    void increaseSpeed()
+    {
+        AIPath[] enemies = FindObjectsOfType<AIPath>();
+        foreach(AIPath enemy in enemies)
+        {
+            enemy.maxSpeed *= 1.5f;
+        }
+        changeSpeed = true;
     }
 }

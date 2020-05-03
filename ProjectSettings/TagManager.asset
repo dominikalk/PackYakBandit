@@ -10,6 +10,8 @@ TagManager:
   - Ground
   - AIPoint
   - Wall
+  - LightBulb
+  - Head
   layers:
   - Default
   - TransparentFX

@@ -73,7 +73,7 @@ public class Enemy : MonoBehaviour
     {
         if (collision.CompareTag("Character"))
         {
-            SceneManager.LoadScene("MainScene");
+            FindObjectOfType<MenuController>().playerDied();
         }
     }
 }
