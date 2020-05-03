@@ -10,8 +10,9 @@ public class Character : MonoBehaviour
     [SerializeField] private float jumpForce = default;
     private Rigidbody2D checkFloor;
 
-    [SerializeField] private GameObject[] coins = default;
+    [SerializeField] private GameObject[] coins;
 
+    private bool canJump = true;
     public bool onGround = true;
     public bool onLadder = false;
     [HideInInspector] public Animator charAnim;
@@ -19,6 +20,7 @@ public class Character : MonoBehaviour
     private int coinsCollected = 0;
     [SerializeField] private Text coinText = default;
 
+    [Space]
     [SerializeField] private Rope grapple = default;
     [SerializeField] private Transform handPosition = default;
     [SerializeField] private AnimationCurve grappleSpeedGraph = default;
@@ -29,12 +31,24 @@ public class Character : MonoBehaviour
     [SerializeField] private float pullForce;
     [SerializeField] private float fallOffDistance;
     [SerializeField] private AnimationCurve fallOffCurve;
+    [SerializeField] private float grappleForgiveness;
 
     // Start is called before the first frame update
     void Start()
     {
         myRigid = GetComponent<Rigidbody2D>();
         charAnim = GetComponent<Animator>();
+
+        int coinsActive = 0;
+        while(coinsActive < 3)
+        {
+            int rand = Random.Range(0, coins.Length);
+            if (!coins[rand].gameObject.activeSelf)
+            {
+                coins[rand].SetActive(true);
+                coinsActive += 1;
+            }
+        }
     }
 
     // Update is called once per frame
@@ -65,38 +79,35 @@ public class Character : MonoBehaviour
             charAnim.SetBool("IsMoving", false);
             myRigid.velocity = new Vector2(0, myRigid.velocity.y);
         }
-        if (Input.GetKey(KeyCode.W))
+        if (Input.GetKey(KeyCode.W) && onLadder)
         {
-            if (onLadder)
-            {
-                myRigid.velocity = new Vector2(myRigid.velocity.x, speed);
-                charAnim.SetBool("Climbing", true);
-            }
-            else if (onGround)
-            {
-                myRigid.AddForce(new Vector2(0, jumpForce));
-            }
+            myRigid.velocity = new Vector2(myRigid.velocity.x, speed);
+            charAnim.SetBool("Climbing", true);
         }
         else
         {
             charAnim.SetBool("Climbing", false);
         }
-        // -------------------------------
+
+        if (Input.GetKeyDown(KeyCode.W) && onGround && canJump)
+        {
+            myRigid.AddForce(new Vector2(0, jumpForce));
+            StartCoroutine("setCanJump");
+        }
+
+        // ---------- Grapple --------------
 
         if (Input.GetMouseButtonDown(0) && !grappleShot)
         {
-            startGrapple();
-            //StopAllCoroutines();
             grappleShot = true;
             stillShooting = true;
+            charAnim.SetBool("StillShooting", true);
+            startGrapple();
+
         }
-        if (Input.GetMouseButtonUp(0))
+        if (!Input.GetMouseButton(0))
         {
-            StopAllCoroutines();
-            grapple.gameObject.SetActive(false);
             stillShooting = false;
-            grappleShot = false;
-            Debug.Log("Up");
         }
 
     }
@@ -111,36 +122,38 @@ public class Character : MonoBehaviour
         grapple.transform.position = handPosition.position;
         grapple.gameObject.SetActive(true);
         Vector2 dirVector = mousePos - new Vector2(handPosition.position.x, handPosition.position.y);
-        Vector2 targetPos = new Vector2(handPosition.position.x, handPosition.position.y) + dirVector;
+        float angle = Mathf.Atan2(handPosition.position.x - mousePos.x, mousePos.y - handPosition.position.y) * 180 / Mathf.PI;
+
+        grapple.transform.SetPositionAndRotation(grapple.transform.position, Quaternion.Euler(0, 0, angle));
+        Vector2 targetPos = new Vector2(handPosition.position.x, handPosition.position.y) + Vector2.ClampMagnitude(dirVector, grappleMaxDistance);
         float distanceTravelled = 0;
 
-        RaycastHit2D[] hits = Physics2D.RaycastAll(handPosition.position, dirVector);
+        RaycastHit2D[] hits = Physics2D.RaycastAll(handPosition.position, dirVector, grappleMaxDistance);
+
+        bool hitInteractable = false;
 
         foreach(RaycastHit2D hit in hits)
         {
             if (hit.collider.CompareTag("Ground") || hit.collider.CompareTag("Wall") || hit.collider.CompareTag("Platform"))
             {
                 targetPos = hit.point;
+                hitInteractable = true;
                 break;
             }
         }
 
-        while (new Vector2(grapple.transform.position.x, grapple.transform.position.y) != targetPos)
+        while (Vector2.Distance(new Vector2(grapple.transform.position.x, grapple.transform.position.y), targetPos) > grappleForgiveness)
         {
             float step = grappleSpeed * Time.deltaTime * grappleSpeedGraph.Evaluate(distanceTravelled / grappleMaxDistance);
             distanceTravelled += step;
             grapple.transform.position = Vector2.MoveTowards(grapple.transform.position, targetPos, step);
             yield return new WaitForEndOfFrame();
         }
-        Debug.Log("Here");
-        if (stillShooting)
+        if (!hitInteractable)
         {
-            StartCoroutine(grapplePull(targetPos));
+            stillShooting = false;
         }
-        else
-        {
-
-        }
+        StartCoroutine(grapplePull(targetPos));
     }
 
     IEnumerator grapplePull(Vector2 targetPos)
@@ -148,24 +161,36 @@ public class Character : MonoBehaviour
         while (stillShooting)
         {
             Vector2 pullDirection = targetPos - new Vector2(handPosition.position.x, handPosition.position.y);
-            float xDist = Mathf.Abs(targetPos.x - handPosition.position.x);
             float yDist = Mathf.Abs(targetPos.y - handPosition.position.y);
-            if (xDist < fallOffDistance)
-            {
-                pullDirection = new Vector2( pullDirection.x * fallOffCurve.Evaluate(xDist / fallOffDistance) , pullDirection.y);
-            }
             if (yDist < fallOffDistance)
             {
                 pullDirection = new Vector2(pullDirection.x, pullDirection.y * fallOffCurve.Evaluate(yDist / fallOffDistance));
             }
+
+            pullDirection = new Vector2(pullDirection.x * 5f, pullDirection.y);
             myRigid.AddForce(pullDirection * pullForce);
             yield return new WaitForEndOfFrame();
         }
+
+        // Pull Back
+        float distanceTravelled = 0;
+        while (Vector2.Distance(new Vector2(grapple.transform.position.x, grapple.transform.position.y), handPosition.position) > grappleForgiveness)
+        {
+            float step = grappleSpeed * Time.deltaTime * grappleSpeedGraph.Evaluate(-(distanceTravelled / grappleMaxDistance));
+            distanceTravelled += step;
+            grapple.transform.position = Vector2.MoveTowards(grapple.transform.position, handPosition.position, step);
+            yield return new WaitForEndOfFrame();
+        }
+        charAnim.SetBool("StillShooting", false);
+        grapple.gameObject.SetActive(false);
+        grappleShot = false;
     }
 
-    void resultFunc(List<RaycastHit2D> results)
+    IEnumerator setCanJump()
     {
-
+        canJump = false;
+        yield return new WaitForSeconds(0.1f);
+        canJump = true;
     }
 
     public void coinCollected(GameObject hitCoin)
@@ -180,8 +205,15 @@ public class Character : MonoBehaviour
         }
         int rand = Random.Range(0, nonVisibleCoins.Count);
         nonVisibleCoins[rand].SetActive(true);
-        hitCoin.SetActive(false);
+        hitCoin.GetComponent<Animator>().SetTrigger("CoinLeave");
+        StartCoroutine(setCoinInactive(hitCoin));
         coinsCollected += 1;
         coinText.text = coinsCollected.ToString();
+    }
+
+    IEnumerator setCoinInactive(GameObject hitCoin)
+    {
+        yield return new WaitForSeconds(0.5f);
+        hitCoin.SetActive(false);
     }
 }

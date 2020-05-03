@@ -5,6 +5,7 @@ using UnityEngine;
 public class Rope : MonoBehaviour
 {
     [SerializeField] Material lineMat = default;
+    [SerializeField] Transform pivot;
     [SerializeField] private GameObject origin = default;
     private LineRenderer line;
     [SerializeField] float lineWidth = default;
@@ -27,7 +28,7 @@ public class Rope : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        line.SetPosition(0, transform.position);
+        line.SetPosition(0, pivot.position);
         line.SetPosition(1, origin.transform.position);
     }
 
