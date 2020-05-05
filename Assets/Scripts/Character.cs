@@ -300,7 +300,7 @@ public class Character : MonoBehaviour
             }
 
             pullDirection = new Vector2(pullDirection.x * 5f, pullDirection.y);
-            myRigid.AddForce(pullDirection * pullForce);
+            myRigid.AddForce(pullDirection * pullForce * Time.deltaTime);
             yield return new WaitForEndOfFrame();
         }
 
