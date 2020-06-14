@@ -34,7 +34,7 @@ public class MusicController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.M))
+        /*if (Input.GetKeyDown(KeyCode.M))
         {
             if (FindObjectOfType<Camera>().GetComponent<AudioListener>())
             {
@@ -44,7 +44,7 @@ public class MusicController : MonoBehaviour
             {
                 FindObjectOfType<Camera>().gameObject.AddComponent<AudioListener>();
             }
-        }
+        }*/
     }
 
     public void died()
